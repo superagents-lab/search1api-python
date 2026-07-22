@@ -121,26 +121,6 @@ def test_rate_limits_are_retried():
     http_client.close()
 
 
-def test_screenshot_returns_bytes_and_metadata():
-    def handler(request):
-        return httpx.Response(
-            200,
-            content=b"\x01\x02\x03",
-            headers={"Content-Type": "image/png", "ETag": "image-etag"},
-            request=request,
-        )
-
-    http_client = httpx.Client(transport=httpx.MockTransport(handler))
-    client = Search1API("test-key", client=http_client)
-
-    result = client.screenshot("https://example.com", full_page=True)
-
-    assert result.content == b"\x01\x02\x03"
-    assert result.content_type == "image/png"
-    assert result.etag == "image-etag"
-    http_client.close()
-
-
 def test_deepcrawl_starts_and_polls():
     responses = [
         (202, {"taskId": "task_1", "status": "queued"}),
@@ -226,18 +206,22 @@ def test_sdk_covers_every_public_openapi_operation():
         for operation in path.values()
     )
 
-    assert operation_ids == sorted(
-        [
-            "crawl",
-            "deepcrawl",
-            "deepcrawlStatus",
-            "extract",
-            "health",
-            "news",
-            "screenshot",
-            "search",
-            "sitemap",
-            "trending",
-            "usage",
-        ]
-    )
+    operation_methods = {
+        "crawl": "crawl",
+        "deepcrawl": "start_deepcrawl",
+        "deepcrawlStatus": "get_deepcrawl_status",
+        "extract": "extract",
+        "health": "health",
+        "news": "news",
+        "search": "search",
+        "sitemap": "sitemap",
+        "trending": "trending",
+        "usage": "usage",
+    }
+
+    assert operation_ids == sorted(operation_methods)
+    for method in operation_methods.values():
+        assert callable(getattr(Search1API, method))
+        assert callable(getattr(AsyncSearch1API, method))
+    assert not hasattr(Search1API, "screenshot")
+    assert not hasattr(AsyncSearch1API, "screenshot")

@@ -54,12 +54,11 @@ print(result["zipUrl"])
 Use `start_deepcrawl`, `get_deepcrawl_status`, and `wait_for_deepcrawl` when
 the application needs to control persistence or polling itself.
 
-The clients also support news, crawl, sitemap, trending, extract, screenshot,
-usage, and batch operations exposed by the Search1API HTTP API. Requests time
-out after 30 seconds and retry `429` and transient `5xx` responses twice by
-default. Authentication, payment, and validation errors are never retried.
-Deepcrawl task creation is not retried automatically because it is not
-idempotent.
+The clients also support news, crawl, sitemap, trending, extract, usage, and
+batch operations exposed by the Search1API HTTP API. Requests time out after
+30 seconds and retry `429` and transient `5xx` responses twice by default.
+Authentication, payment, and validation errors are never retried. Deepcrawl
+task creation is not retried automatically because it is not idempotent.
 
 ## Development
 

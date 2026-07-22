@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
 JsonPrimitive = Union[bool, float, int, str, None]
@@ -179,17 +178,3 @@ class HealthResponseRequired(TypedDict):
 class HealthResponse(HealthResponseRequired, total=False):
     timestamp: str
     version: str
-
-
-class ScreenshotViewport(TypedDict, total=False):
-    width: int
-    height: int
-    device_scale_factor: float
-
-
-@dataclass(frozen=True)
-class ScreenshotResponse:
-    content: bytes
-    content_type: str
-    content_length: Optional[int] = None
-    etag: Optional[str] = None

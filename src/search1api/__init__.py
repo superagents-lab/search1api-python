@@ -15,7 +15,6 @@ from .errors import (
     Search1APIError,
     UnprocessableEntityError,
 )
-from .types import ScreenshotResponse
 
 __all__ = [
     "APIConnectionError",
@@ -30,7 +29,6 @@ __all__ = [
     "NotFoundError",
     "PaymentRequiredError",
     "RateLimitError",
-    "ScreenshotResponse",
     "Search1API",
     "Search1APIConfigurationError",
     "Search1APIError",

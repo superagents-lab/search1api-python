@@ -6,7 +6,7 @@ import os
 import random
 import time
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Literal, Mapping, Optional, cast
+from typing import Any, Dict, List, Mapping, Optional, cast
 from urllib.parse import quote
 
 import httpx
@@ -32,8 +32,6 @@ from .types import (
     NewsEngine,
     NewsRequest,
     NewsResponse,
-    ScreenshotResponse,
-    ScreenshotViewport,
     SearchEngine,
     SearchRequest,
     SearchResponse,
@@ -292,51 +290,6 @@ class Search1API(_ClientConfig):
                     {"url": url, "prompt": prompt, "response_format": response_format}
                 ),
             ),
-        )
-
-    def screenshot(
-        self,
-        url: str,
-        *,
-        format: Optional[Literal["png", "jpeg", "webp"]] = None,
-        full_page: Optional[bool] = None,
-        viewport: Optional[ScreenshotViewport] = None,
-        wait_until: Optional[Literal["domcontentloaded", "load", "networkidle"]] = None,
-        wait_for_selector: Optional[str] = None,
-        selector: Optional[str] = None,
-        delay_ms: Optional[int] = None,
-        timeout_ms: Optional[int] = None,
-        quality: Optional[int] = None,
-        omit_background: Optional[bool] = None,
-        color_scheme: Optional[Literal["light", "dark"]] = None,
-        animations: Optional[Literal["disabled", "allow"]] = None,
-    ) -> ScreenshotResponse:
-        payload = _compact(
-            {
-                "url": url,
-                "format": format,
-                "full_page": full_page,
-                "viewport": viewport,
-                "wait_until": wait_until,
-                "wait_for_selector": wait_for_selector,
-                "selector": selector,
-                "delay_ms": delay_ms,
-                "timeout_ms": timeout_ms,
-                "quality": quality,
-                "omit_background": omit_background,
-                "color_scheme": color_scheme,
-                "animations": animations,
-            }
-        )
-        response = self._request("POST", "/screenshot", json=payload)
-        length = response.headers.get("content-length")
-        return ScreenshotResponse(
-            content=response.content,
-            content_type=response.headers.get(
-                "content-type", "application/octet-stream"
-            ).split(";")[0],
-            content_length=int(length) if length and length.isdigit() else None,
-            etag=response.headers.get("etag"),
         )
 
     def start_deepcrawl(
@@ -618,51 +571,6 @@ class AsyncSearch1API(_ClientConfig):
             ),
         )
 
-    async def screenshot(
-        self,
-        url: str,
-        *,
-        format: Optional[Literal["png", "jpeg", "webp"]] = None,
-        full_page: Optional[bool] = None,
-        viewport: Optional[ScreenshotViewport] = None,
-        wait_until: Optional[Literal["domcontentloaded", "load", "networkidle"]] = None,
-        wait_for_selector: Optional[str] = None,
-        selector: Optional[str] = None,
-        delay_ms: Optional[int] = None,
-        timeout_ms: Optional[int] = None,
-        quality: Optional[int] = None,
-        omit_background: Optional[bool] = None,
-        color_scheme: Optional[Literal["light", "dark"]] = None,
-        animations: Optional[Literal["disabled", "allow"]] = None,
-    ) -> ScreenshotResponse:
-        payload = _compact(
-            {
-                "url": url,
-                "format": format,
-                "full_page": full_page,
-                "viewport": viewport,
-                "wait_until": wait_until,
-                "wait_for_selector": wait_for_selector,
-                "selector": selector,
-                "delay_ms": delay_ms,
-                "timeout_ms": timeout_ms,
-                "quality": quality,
-                "omit_background": omit_background,
-                "color_scheme": color_scheme,
-                "animations": animations,
-            }
-        )
-        response = await self._request("POST", "/screenshot", json=payload)
-        length = response.headers.get("content-length")
-        return ScreenshotResponse(
-            content=response.content,
-            content_type=response.headers.get(
-                "content-type", "application/octet-stream"
-            ).split(";")[0],
-            content_length=int(length) if length and length.isdigit() else None,
-            etag=response.headers.get("etag"),
-        )
-
     async def start_deepcrawl(
         self, url: str, *, type: Optional[CrawlType] = None
     ) -> DeepcrawlAcceptedResponse:
@@ -776,6 +684,3 @@ class AsyncSearch1API(_ClientConfig):
                 response.status_code, _error_body(response), response.headers
             )
         raise Search1APIError("Search1API request exhausted its retry budget")
-
-    (ScreenshotViewport,)
-    (SearchEngine,)
