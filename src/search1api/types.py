@@ -26,6 +26,8 @@ SearchEngine = Literal[
 ]
 NewsEngine = Literal["google", "bing", "duckduckgo", "yahoo", "hackernews", "reuters"]
 CrawlType = Literal["sitemap", "all"]
+ScreenshotFormat = Literal["png", "jpeg", "webp"]
+ScreenshotWaitUntil = Literal["domcontentloaded", "load", "networkidle"]
 
 
 class SearchRequestRequired(TypedDict):
@@ -123,6 +125,21 @@ class CrawlResult(CrawlResultRequired, total=False):
 class CrawlResponse(TypedDict):
     crawlParameters: Dict[str, str]
     results: CrawlResult
+
+
+class ScreenshotViewport(TypedDict, total=False):
+    width: int
+    height: int
+    device_scale_factor: float
+
+
+class ScreenshotResponseRequired(TypedDict):
+    data: bytes
+    content_type: str
+
+
+class ScreenshotResponse(ScreenshotResponseRequired, total=False):
+    request_id: str
 
 
 class SitemapResponse(TypedDict):

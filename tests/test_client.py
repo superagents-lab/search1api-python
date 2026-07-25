@@ -75,6 +75,51 @@ def test_search_maps_parameters_and_authentication():
     http_client.close()
 
 
+def test_screenshot_returns_bytes_and_response_metadata():
+    seen = []
+    image = b"\x89PNG"
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(
+            200,
+            content=image,
+            headers={
+                "Content-Type": "image/png",
+                "X-Request-Id": "req_screenshot_1",
+            },
+            request=request,
+        )
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    result = client.screenshot(
+        "https://example.com",
+        full_page=True,
+        viewport={"width": 1280, "height": 720, "device_scale_factor": 2},
+        wait_until="networkidle",
+    )
+
+    assert result == {
+        "data": image,
+        "content_type": "image/png",
+        "request_id": "req_screenshot_1",
+    }
+    assert seen[0].headers["accept"] == "image/png"
+    assert json.loads(seen[0].content) == {
+        "url": "https://example.com",
+        "full_page": True,
+        "viewport": {
+            "width": 1280,
+            "height": 720,
+            "device_scale_factor": 2,
+        },
+        "wait_until": "networkidle",
+    }
+    http_client.close()
+
+
 def test_authentication_errors_are_not_retried():
     calls = 0
 
@@ -214,6 +259,7 @@ def test_sdk_covers_every_public_openapi_operation():
         "health": "health",
         "news": "news",
         "search": "search",
+        "screenshot": "screenshot",
         "sitemap": "sitemap",
         "trending": "trending",
         "usage": "usage",
@@ -223,5 +269,3 @@ def test_sdk_covers_every_public_openapi_operation():
     for method in operation_methods.values():
         assert callable(getattr(Search1API, method))
         assert callable(getattr(AsyncSearch1API, method))
-    assert not hasattr(Search1API, "screenshot")
-    assert not hasattr(AsyncSearch1API, "screenshot")

@@ -6,7 +6,7 @@ import os
 import random
 import time
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Mapping, Optional, cast
+from typing import Any, Dict, List, Literal, Mapping, Optional, cast
 from urllib.parse import quote
 
 import httpx
@@ -32,6 +32,10 @@ from .types import (
     NewsEngine,
     NewsRequest,
     NewsResponse,
+    ScreenshotFormat,
+    ScreenshotResponse,
+    ScreenshotViewport,
+    ScreenshotWaitUntil,
     SearchEngine,
     SearchRequest,
     SearchResponse,
@@ -80,6 +84,41 @@ def _search_payload(
     )
 
 
+def _screenshot_payload(
+    url: str,
+    *,
+    format: Optional[ScreenshotFormat] = None,
+    full_page: Optional[bool] = None,
+    viewport: Optional[ScreenshotViewport] = None,
+    wait_until: Optional[ScreenshotWaitUntil] = None,
+    wait_for_selector: Optional[str] = None,
+    selector: Optional[str] = None,
+    delay_ms: Optional[int] = None,
+    timeout_ms: Optional[int] = None,
+    quality: Optional[int] = None,
+    omit_background: Optional[bool] = None,
+    color_scheme: Optional[Literal["light", "dark"]] = None,
+    animations: Optional[Literal["disabled", "allow"]] = None,
+) -> Dict[str, Any]:
+    return _compact(
+        {
+            "url": url,
+            "format": format,
+            "full_page": full_page,
+            "viewport": viewport,
+            "wait_until": wait_until,
+            "wait_for_selector": wait_for_selector,
+            "selector": selector,
+            "delay_ms": delay_ms,
+            "timeout_ms": timeout_ms,
+            "quality": quality,
+            "omit_background": omit_background,
+            "color_scheme": color_scheme,
+            "animations": animations,
+        }
+    )
+
+
 def _retry_after(response: httpx.Response) -> Optional[float]:
     value = response.headers.get("retry-after")
     if not value:
@@ -88,7 +127,8 @@ def _retry_after(response: httpx.Response) -> Optional[float]:
         return max(0.0, float(value))
     except ValueError:
         try:
-            return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+            retry_at = float(parsedate_to_datetime(value).timestamp())
+            return max(0.0, retry_at - time.time())
         except (TypeError, ValueError, OverflowError):
             return None
 
@@ -135,11 +175,11 @@ class _ClientConfig:
         self.retry_delay: float = retry_delay
         self.headers: Dict[str, str] = dict(headers or {})
 
-    def _request_headers(self) -> Dict[str, str]:
+    def _request_headers(self, accept: str = "application/json") -> Dict[str, str]:
         return {
-            "Accept": "application/json",
+            "Accept": accept,
             "Authorization": f"Bearer {self.api_key}",
-            "X-Search1API-Client": "python/0.1.0",
+            "X-Search1API-Client": "python/0.2.0",
             **self.headers,
         }
 
@@ -251,6 +291,54 @@ class Search1API(_ClientConfig):
         return cast(
             List[CrawlResponse], self._request_json("POST", "/crawl", json=requests)
         )
+
+    def screenshot(
+        self,
+        url: str,
+        *,
+        format: Optional[ScreenshotFormat] = None,
+        full_page: Optional[bool] = None,
+        viewport: Optional[ScreenshotViewport] = None,
+        wait_until: Optional[ScreenshotWaitUntil] = None,
+        wait_for_selector: Optional[str] = None,
+        selector: Optional[str] = None,
+        delay_ms: Optional[int] = None,
+        timeout_ms: Optional[int] = None,
+        quality: Optional[int] = None,
+        omit_background: Optional[bool] = None,
+        color_scheme: Optional[Literal["light", "dark"]] = None,
+        animations: Optional[Literal["disabled", "allow"]] = None,
+    ) -> ScreenshotResponse:
+        response = self._request(
+            "POST",
+            "/screenshot",
+            accept=f"image/{format or 'png'}",
+            json=_screenshot_payload(
+                url,
+                format=format,
+                full_page=full_page,
+                viewport=viewport,
+                wait_until=wait_until,
+                wait_for_selector=wait_for_selector,
+                selector=selector,
+                delay_ms=delay_ms,
+                timeout_ms=timeout_ms,
+                quality=quality,
+                omit_background=omit_background,
+                color_scheme=color_scheme,
+                animations=animations,
+            ),
+        )
+        result: ScreenshotResponse = {
+            "data": response.content,
+            "content_type": response.headers.get(
+                "content-type", f"image/{format or 'png'}"
+            ),
+        }
+        request_id = response.headers.get("x-request-id")
+        if request_id:
+            result["request_id"] = request_id
+        return result
 
     def sitemap(self, url: str, *, type: Optional[CrawlType] = None) -> SitemapResponse:
         return cast(
@@ -365,13 +453,14 @@ class Search1API(_ClientConfig):
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         retryable = bool(kwargs.pop("retryable", True))
+        accept = str(kwargs.pop("accept", "application/json"))
         max_retries = self.max_retries if retryable else 0
         for attempt in range(max_retries + 1):
             try:
                 response = self._client.request(
                     method,
                     f"{self.base_url}{path}",
-                    headers=self._request_headers(),
+                    headers=self._request_headers(accept),
                     timeout=self.timeout,
                     **kwargs,
                 )
@@ -529,6 +618,54 @@ class AsyncSearch1API(_ClientConfig):
             await self._request_json("POST", "/crawl", json=requests),
         )
 
+    async def screenshot(
+        self,
+        url: str,
+        *,
+        format: Optional[ScreenshotFormat] = None,
+        full_page: Optional[bool] = None,
+        viewport: Optional[ScreenshotViewport] = None,
+        wait_until: Optional[ScreenshotWaitUntil] = None,
+        wait_for_selector: Optional[str] = None,
+        selector: Optional[str] = None,
+        delay_ms: Optional[int] = None,
+        timeout_ms: Optional[int] = None,
+        quality: Optional[int] = None,
+        omit_background: Optional[bool] = None,
+        color_scheme: Optional[Literal["light", "dark"]] = None,
+        animations: Optional[Literal["disabled", "allow"]] = None,
+    ) -> ScreenshotResponse:
+        response = await self._request(
+            "POST",
+            "/screenshot",
+            accept=f"image/{format or 'png'}",
+            json=_screenshot_payload(
+                url,
+                format=format,
+                full_page=full_page,
+                viewport=viewport,
+                wait_until=wait_until,
+                wait_for_selector=wait_for_selector,
+                selector=selector,
+                delay_ms=delay_ms,
+                timeout_ms=timeout_ms,
+                quality=quality,
+                omit_background=omit_background,
+                color_scheme=color_scheme,
+                animations=animations,
+            ),
+        )
+        result: ScreenshotResponse = {
+            "data": response.content,
+            "content_type": response.headers.get(
+                "content-type", f"image/{format or 'png'}"
+            ),
+        }
+        request_id = response.headers.get("x-request-id")
+        if request_id:
+            result["request_id"] = request_id
+        return result
+
     async def sitemap(
         self, url: str, *, type: Optional[CrawlType] = None
     ) -> SitemapResponse:
@@ -649,13 +786,14 @@ class AsyncSearch1API(_ClientConfig):
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         retryable = bool(kwargs.pop("retryable", True))
+        accept = str(kwargs.pop("accept", "application/json"))
         max_retries = self.max_retries if retryable else 0
         for attempt in range(max_retries + 1):
             try:
                 response = await self._client.request(
                     method,
                     f"{self.base_url}{path}",
-                    headers=self._request_headers(),
+                    headers=self._request_headers(accept),
                     timeout=self.timeout,
                     **kwargs,
                 )
