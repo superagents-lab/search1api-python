@@ -54,6 +54,23 @@ print(result["zipUrl"])
 Use `start_deepcrawl`, `get_deepcrawl_status`, and `wait_for_deepcrawl` when
 the application needs to control persistence or polling itself.
 
+## Screenshot
+
+Screenshot responses are binary image bytes rather than JSON:
+
+```python
+from pathlib import Path
+
+screenshot = client.screenshot(
+    "https://example.com",
+    format="png",
+    full_page=True,
+)
+
+Path("screenshot.png").write_bytes(screenshot["data"])
+print(screenshot["content_type"], screenshot.get("request_id"))
+```
+
 The clients also support news, crawl, sitemap, trending, extract, usage, and
 batch operations exposed by the Search1API HTTP API. Requests time out after
 30 seconds and retry `429` and transient `5xx` responses twice by default.
