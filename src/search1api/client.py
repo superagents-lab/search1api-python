@@ -127,7 +127,8 @@ def _retry_after(response: httpx.Response) -> Optional[float]:
         return max(0.0, float(value))
     except ValueError:
         try:
-            return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+            retry_at = float(parsedate_to_datetime(value).timestamp())
+            return max(0.0, retry_at - time.time())
         except (TypeError, ValueError, OverflowError):
             return None
 
@@ -178,7 +179,7 @@ class _ClientConfig:
         return {
             "Accept": accept,
             "Authorization": f"Bearer {self.api_key}",
-            "X-Search1API-Client": "python/0.1.0",
+            "X-Search1API-Client": "python/0.2.0",
             **self.headers,
         }
 
