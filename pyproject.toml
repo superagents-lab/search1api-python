@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "search1api"
-version = "0.2.0"
+version = "0.2.1"
 description = "Official Python client for Search1API"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -33,7 +33,8 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://www.search1api.com/docs/integrations/sdks"
+Homepage = "https://s1.dev"
+Documentation = "https://s1.dev/docs/integrations/sdks"
 Repository = "https://github.com/superagents-lab/search1api-python"
 Issues = "https://github.com/superagents-lab/search1api-python/issues"
 
