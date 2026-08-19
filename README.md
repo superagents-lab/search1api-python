@@ -2,7 +2,7 @@
 
 Official synchronous and asynchronous Python clients for Search1API.
 
-API documentation: [search1api.com/docs](https://www.search1api.com/docs)
+API documentation: [search1api.com/docs](https://s1.dev/docs)
 
 ## Install
 
