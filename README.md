@@ -26,6 +26,12 @@ for result in response["results"]:
     print(result["title"], result["link"])
 ```
 
+`search_service` selects one engine (`google` by default), for example `bing`,
+`bingcn`, `yandex`, `reddit`, `github`, `arxiv`, `wikipedia`, or `grokipedia`.
+`page` requests a later results page on engines with native pagination
+(`bing`, `bingcn`, `baidu`, `grokipedia`). Results carry `published_date` when the source
+exposes one.
+
 Use the client as a context manager when it owns the HTTP connection pool:
 
 ```python
@@ -41,6 +47,24 @@ from search1api import AsyncSearch1API
 async with AsyncSearch1API() as client:
     response = await client.search("latest AI agent frameworks")
 ```
+
+## Ask
+
+`ask` sends a natural-language request and lets Search1API choose the engines
+and time window. It returns at most 10 results ranked by relevance, and
+`intent` reports what was searched:
+
+```python
+answer = client.ask("What are developers saying about Bun 1.3 this month?")
+
+print(answer["intent"]["sources"], answer["intent"]["time_range"])
+for result in answer["results"]:
+    print(result["relevance"], result["source"], result["title"], result["link"])
+```
+
+A completed request costs 5 credits. Ask is not available with pay-per-request
+payments, and its default timeout is 45 seconds. Use `search` when you already
+know which engine and keywords you want.
 
 ## Deepcrawl
 
@@ -75,7 +99,21 @@ The clients also support news, crawl, sitemap, trending, extract, usage, and
 batch operations exposed by the Search1API HTTP API. Requests time out after
 30 seconds and retry `429` and transient `5xx` responses twice by default.
 Authentication, payment, and validation errors are never retried. Deepcrawl
-task creation is not retried automatically because it is not idempotent.
+task creation and feedback are not retried automatically because they are not
+idempotent.
+
+## Feedback
+
+`feedback` reports a Search1API problem, missing capability, or confusing
+documentation. It is free. Do not include credentials or personal data:
+
+```python
+client.feedback(
+    "Results for this query have no publication dates",
+    category="feature_request",
+    request_id="the x-search1api-request-id of the original request",
+)
+```
 
 ## Development
 

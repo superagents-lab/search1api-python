@@ -215,6 +215,123 @@ def test_deepcrawl_task_creation_is_not_retried():
     http_client.close()
 
 
+def test_search_sends_page_and_new_engines():
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.content))
+        return json_response(200, {"results": []}, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    client.search("kubernetes", search_service="bingcn", page=2)
+    client.search("Alan Turing", search_service="grokipedia")
+
+    assert bodies == [
+        {"query": "kubernetes", "search_service": "bingcn", "page": 2},
+        {"query": "Alan Turing", "search_service": "grokipedia"},
+    ]
+    http_client.close()
+
+
+def test_ask_sends_only_the_query_with_a_longer_timeout():
+    seen = []
+    body = {
+        "query": "recent papers on speculative decoding",
+        "intent": {
+            "search_query": "speculative decoding",
+            "sources": ["arxiv"],
+            "time_range": None,
+        },
+        "results": [
+            {
+                "title": "Speculative decoding survey",
+                "link": "https://arxiv.org/abs/1",
+                "snippet": "Survey",
+                "source": "arxiv",
+                "relevance": 0.88,
+            }
+        ],
+        "errors": [],
+    }
+
+    def handler(request):
+        seen.append(request)
+        return json_response(200, body, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    assert client.ask(body["query"]) == body
+    request = seen[0]
+    assert request.method == "POST"
+    assert str(request.url) == "https://api.search1api.com/ask"
+    assert json.loads(request.content) == {"query": body["query"]}
+    assert request.extensions["timeout"]["read"] == 45.0
+    http_client.close()
+
+
+def test_feedback_is_sent_once_without_retries():
+    calls = []
+
+    def handler(request):
+        calls.append(json.loads(request.content))
+        return json_response(503, {"ok": False, "message": "unavailable"}, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client, max_retries=2, retry_delay=0)
+
+    with pytest.raises(InternalServerError, match="unavailable"):
+        client.feedback(
+            "Need publication dates",
+            category="feature_request",
+            request_id="req_1",
+            agent={"name": "codex"},
+        )
+
+    assert calls == [
+        {
+            "message": "Need publication dates",
+            "category": "feature_request",
+            "request_id": "req_1",
+            "agent": {"name": "codex"},
+        }
+    ]
+    http_client.close()
+
+
+def test_async_ask_and_feedback():
+    async def run():
+        paths = []
+
+        async def handler(request):
+            paths.append(request.url.path)
+            if request.url.path == "/feedback":
+                return json_response(201, {"id": "fb_1", "status": "new"}, request)
+            return json_response(
+                200,
+                {
+                    "query": "q",
+                    "intent": {"search_query": "q", "sources": [], "time_range": None},
+                    "results": [],
+                    "errors": [],
+                },
+                request,
+            )
+
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        client = AsyncSearch1API("test-key", client=http_client)
+        try:
+            assert (await client.ask("q"))["results"] == []
+            assert await client.feedback("docs typo") == {"id": "fb_1", "status": "new"}
+        finally:
+            await http_client.aclose()
+        assert paths == ["/ask", "/feedback"]
+
+    asyncio.run(run())
+
+
 def test_async_client_uses_the_same_api_shape():
     async def run():
         async def handler(request):
@@ -252,10 +369,12 @@ def test_sdk_covers_every_public_openapi_operation():
     )
 
     operation_methods = {
+        "ask": "ask",
         "crawl": "crawl",
         "deepcrawl": "start_deepcrawl",
         "deepcrawlStatus": "get_deepcrawl_status",
         "extract": "extract",
+        "feedback": "feedback",
         "health": "health",
         "news": "news",
         "search": "search",

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "search1api"
-version = "0.2.1"
+version = "0.3.0"
 description = "Official Python client for Search1API"
 readme = "README.md"
 license = { file = "LICENSE" }
