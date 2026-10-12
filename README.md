@@ -34,7 +34,7 @@ exposes one. Engine-specific fields are in each result's optional `metadata`:
 GitHub uses `metadata.kind`, `metadata.stars`, `metadata.language`, and
 `metadata.num_comments`; Hacker News news results use `metadata.story_url`,
 `metadata.points`, and `metadata.num_comments`. The former top-level paths
-are removed in the pending release; `published_date` stays at the top level.
+are removed in 0.4.0; `published_date` stays at the top level.
 
 Use the client as a context manager when it owns the HTTP connection pool:
 

@@ -29,17 +29,17 @@ def test_requires_api_key(monkeypatch):
 def test_preserves_nested_metadata(method, asynchronous):
     body = {
         "searchParameters": {"query": "q"},
-        "results": [{
-            "title": "Thread",
-            "link": "https://example.com/thread",
-            "snippet": "Discussion",
-            "published_date": "2026-10-12",
-            "metadata": {"num_comments": 0},
-        }],
+        "results": [
+            {
+                "title": "Thread",
+                "link": "https://example.com/thread",
+                "snippet": "Discussion",
+                "published_date": "2026-10-12",
+                "metadata": {"num_comments": 0},
+            }
+        ],
     }
-    transport = httpx.MockTransport(
-        lambda request: json_response(200, body, request)
-    )
+    transport = httpx.MockTransport(lambda request: json_response(200, body, request))
 
     async def run():
         async with httpx.AsyncClient(transport=transport) as http_client:
