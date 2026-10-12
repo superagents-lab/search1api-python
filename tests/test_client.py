@@ -24,6 +24,39 @@ def test_requires_api_key(monkeypatch):
         Search1API()
 
 
+@pytest.mark.parametrize("method", ["search", "news"])
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_preserves_nested_metadata(method, asynchronous):
+    body = {
+        "searchParameters": {"query": "q"},
+        "results": [
+            {
+                "title": "Thread",
+                "link": "https://example.com/thread",
+                "snippet": "Discussion",
+                "published_date": "2026-10-12",
+                "metadata": {"num_comments": 0},
+            }
+        ],
+    }
+    transport = httpx.MockTransport(lambda request: json_response(200, body, request))
+
+    async def run():
+        async with httpx.AsyncClient(transport=transport) as http_client:
+            async with AsyncSearch1API("test-key", client=http_client) as client:
+                return await getattr(client, method)("q")
+
+    if asynchronous:
+        response = asyncio.run(run())
+    else:
+        with httpx.Client(transport=transport) as http_client:
+            with Search1API("test-key", client=http_client) as client:
+                response = getattr(client, method)("q")
+    assert response == body
+    assert response["results"][0]["metadata"]["num_comments"] == 0
+    assert "num_comments" not in response["results"][0]
+
+
 def test_rejects_invalid_retry_and_timeout_settings():
     with pytest.raises(Search1APIConfigurationError, match="max_retries"):
         Search1API("test-key", max_retries=-1)

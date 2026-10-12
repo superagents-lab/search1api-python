@@ -54,15 +54,19 @@ class SearchResultRequired(TypedDict):
     snippet: str
 
 
-class SearchResult(SearchResultRequired, total=False):
-    content: str
-    published_date: str
+class SearchResultMetadata(TypedDict, total=False):
     kind: Literal["repo", "issue", "pr", "discussion"]
     stars: int
     language: str
     num_comments: int
     points: int
     story_url: str
+
+
+class SearchResult(SearchResultRequired, total=False):
+    content: str
+    published_date: str
+    metadata: SearchResultMetadata
 
 
 class SearchResponseRequired(TypedDict):
