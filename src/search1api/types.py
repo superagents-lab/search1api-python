@@ -126,6 +126,70 @@ class AskResponse(TypedDict):
     errors: List[AskError]
 
 
+class MapsLocationRequired(TypedDict):
+    latitude: float
+    longitude: float
+
+
+class MapsLocation(MapsLocationRequired, total=False):
+    zoom: float
+
+
+class MapsCoordinates(TypedDict):
+    latitude: float
+    longitude: float
+
+
+class MapsOpeningHours(TypedDict, total=False):
+    monday: str
+    tuesday: str
+    wednesday: str
+    thursday: str
+    friday: str
+    saturday: str
+    sunday: str
+
+
+class MapsPlaceRequired(TypedDict):
+    position: int
+    name: str
+    place_id: str
+    maps_url: str
+
+
+class MapsPlace(MapsPlaceRequired, total=False):
+    address: str
+    phone: str
+    website: str
+    thumbnail: str
+    category: str
+    categories: List[str]
+    rating: float
+    review_count: int
+    coordinates: MapsCoordinates
+    opening_hours: MapsOpeningHours
+    open_state: str
+    price: str
+    description: str
+
+
+class MapsParametersRequired(TypedDict):
+    query: str
+    country: str
+    language: str
+    page: int
+    max_results: int
+
+
+class MapsParameters(MapsParametersRequired, total=False):
+    location: MapsLocation
+
+
+class MapsResponse(TypedDict):
+    searchParameters: MapsParameters
+    results: List[MapsPlace]
+
+
 FeedbackCategory = Literal["bug", "feature_request", "docs", "other"]
 
 

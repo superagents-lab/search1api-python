@@ -305,6 +305,82 @@ def test_ask_sends_only_the_query_with_a_longer_timeout():
     http_client.close()
 
 
+def test_maps_sends_location_and_paging():
+    seen = []
+    body = {
+        "searchParameters": {
+            "query": "coffee shops",
+            "country": "us",
+            "language": "en",
+            "location": {"latitude": 40.7455, "longitude": -74.0083, "zoom": 15},
+            "page": 2,
+            "max_results": 5,
+        },
+        "results": [
+            {
+                "position": 21,
+                "name": "Example Coffee",
+                "place_id": "ChIJ123",
+                "maps_url": "https://www.google.com/maps/search/?api=1&query=Example",
+                "rating": 4.6,
+            }
+        ],
+    }
+
+    def handler(request):
+        seen.append(request)
+        return json_response(200, body, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    response = client.maps(
+        "coffee shops",
+        location={"latitude": 40.7455, "longitude": -74.0083, "zoom": 15},
+        page=2,
+        max_results=5,
+    )
+
+    assert response == body
+    assert str(seen[0].url) == "https://api.search1api.com/maps"
+    assert json.loads(seen[0].content) == {
+        "query": "coffee shops",
+        "location": {"latitude": 40.7455, "longitude": -74.0083, "zoom": 15},
+        "page": 2,
+        "max_results": 5,
+    }
+    http_client.close()
+
+
+def test_async_maps():
+    async def run():
+        async def handler(request):
+            assert json.loads(request.content) == {"query": "ramen", "country": "jp"}
+            return json_response(
+                200,
+                {
+                    "searchParameters": {
+                        "query": "ramen",
+                        "country": "jp",
+                        "language": "en",
+                        "page": 1,
+                        "max_results": 20,
+                    },
+                    "results": [],
+                },
+                request,
+            )
+
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        client = AsyncSearch1API("test-key", client=http_client)
+        try:
+            assert (await client.maps("ramen", country="jp"))["results"] == []
+        finally:
+            await http_client.aclose()
+
+    asyncio.run(run())
+
+
 def test_feedback_is_sent_once_without_retries():
     calls = []
 
@@ -409,6 +485,7 @@ def test_sdk_covers_every_public_openapi_operation():
         "extract": "extract",
         "feedback": "feedback",
         "health": "health",
+        "maps": "maps",
         "news": "news",
         "search": "search",
         "screenshot": "screenshot",
