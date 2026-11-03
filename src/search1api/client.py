@@ -33,6 +33,8 @@ from .types import (
     FeedbackCategory,
     FeedbackResponse,
     HealthResponse,
+    MapsLocation,
+    MapsResponse,
     NewsEngine,
     NewsRequest,
     NewsResponse,
@@ -62,6 +64,27 @@ DEFAULT_DEEPCRAWL_TIMEOUT = 300.0
 
 def _compact(payload: Mapping[str, Any]) -> Dict[str, Any]:
     return {key: value for key, value in payload.items() if value is not None}
+
+
+def _maps_payload(
+    query: str,
+    *,
+    country: Optional[str],
+    language: Optional[str],
+    location: Optional[MapsLocation],
+    page: Optional[int],
+    max_results: Optional[int],
+) -> Dict[str, Any]:
+    return _compact(
+        {
+            "query": query,
+            "country": country,
+            "language": language,
+            "location": dict(location) if location is not None else None,
+            "page": page,
+            "max_results": max_results,
+        }
+    )
 
 
 def _search_payload(
@@ -320,6 +343,30 @@ class Search1API(_ClientConfig):
             AskResponse,
             self._request_json("POST", "/ask", json={"query": query}, timeout=timeout),
         )
+
+    def maps(
+        self,
+        query: str,
+        *,
+        country: Optional[str] = None,
+        language: Optional[str] = None,
+        location: Optional[MapsLocation] = None,
+        page: Optional[int] = None,
+        max_results: Optional[int] = None,
+    ) -> MapsResponse:
+        """Google Maps place search: one page of up to 20 places.
+
+        A completed page costs 3 credits. Pages after the first need ``location``.
+        """
+        payload = _maps_payload(
+            query,
+            country=country,
+            language=language,
+            location=location,
+            page=page,
+            max_results=max_results,
+        )
+        return cast(MapsResponse, self._request_json("POST", "/maps", json=payload))
 
     def crawl(
         self, url: str, *, enable_fallback: Optional[bool] = None
@@ -680,6 +727,36 @@ class AsyncSearch1API(_ClientConfig):
             AskResponse,
             await self._request_json(
                 "POST", "/ask", json={"query": query}, timeout=timeout
+            ),
+        )
+
+    async def maps(
+        self,
+        query: str,
+        *,
+        country: Optional[str] = None,
+        language: Optional[str] = None,
+        location: Optional[MapsLocation] = None,
+        page: Optional[int] = None,
+        max_results: Optional[int] = None,
+    ) -> MapsResponse:
+        """Google Maps place search: one page of up to 20 places.
+
+        A completed page costs 3 credits. Pages after the first need ``location``.
+        """
+        return cast(
+            MapsResponse,
+            await self._request_json(
+                "POST",
+                "/maps",
+                json=_maps_payload(
+                    query,
+                    country=country,
+                    language=language,
+                    location=location,
+                    page=page,
+                    max_results=max_results,
+                ),
             ),
         )
 
