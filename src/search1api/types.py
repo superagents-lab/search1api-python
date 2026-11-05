@@ -28,6 +28,7 @@ SearchEngine = Literal[
 ]
 NewsEngine = Literal["google", "bing", "duckduckgo", "yahoo", "hackernews", "reuters"]
 CrawlType = Literal["sitemap", "all"]
+DeepcrawlFormat = Literal["zip", "json"]
 ScreenshotFormat = Literal["png", "jpeg", "webp"]
 ScreenshotWaitUntil = Literal["domcontentloaded", "load", "networkidle"]
 
@@ -293,6 +294,25 @@ class DeepcrawlStatusResponseRequired(TypedDict):
     taskId: str
 
 
+class DeepcrawlStats(TypedDict):
+    discovered: int
+    matched: int
+    skipped: int
+    crawled: int
+    failed: int
+
+
+class DeepcrawlFailedPage(TypedDict):
+    url: str
+    error: str
+
+
+class DeepcrawlPage(TypedDict):
+    url: str
+    title: Optional[str]
+    content: str
+
+
 class DeepcrawlStatusResponse(DeepcrawlStatusResponseRequired, total=False):
     status: str
     success: bool
@@ -300,6 +320,11 @@ class DeepcrawlStatusResponse(DeepcrawlStatusResponseRequired, total=False):
     error: Optional[str]
     r2Key: str
     zipUrl: Optional[str]
+    format: DeepcrawlFormat
+    stats: DeepcrawlStats
+    failed: List[DeepcrawlFailedPage]
+    resultUrl: Optional[str]
+    pages: List[DeepcrawlPage]
 
 
 class UsageResponse(TypedDict):
