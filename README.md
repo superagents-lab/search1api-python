@@ -101,6 +101,32 @@ result = client.deepcrawl("https://example.com", type="all")
 print(result["zipUrl"])
 ```
 
+`max_pages` (1-1000, default 1000) caps the number of pages. `include_paths`
+and `exclude_paths` (up to 20 rules each) are matched against the URL path: a
+rule without `*` is a path prefix on segment boundaries (`/docs` matches
+`/docs/api` but not `/docsearch`); a rule with `*` must match the whole path,
+and `*` also matches `/`. Exclusion wins, and `max_pages` applies after the path
+rules, in discovery order. `format="json"` returns the pages in the result
+instead of a ZIP:
+
+```python
+result = client.deepcrawl(
+    "https://example.com",
+    max_pages=50,
+    include_paths=["/docs"],
+    format="json",
+)
+
+for page in result.get("pages", []):
+    print(page["url"], page["title"], len(page["content"]))
+```
+
+Each page has `url`, `title` (may be `None`) and `content` as Markdown.
+`pages` is omitted when the result is larger than 5 MB; download `resultUrl`
+instead, a JSON file with the same `pages` and `failed` lists. Finished tasks
+also report `stats` (`discovered`, `matched`, `skipped`, `crawled`, `failed`)
+and `failed` (`url`, `error`). A task costs 20 credits regardless of page count.
+
 Use `start_deepcrawl`, `get_deepcrawl_status`, and `wait_for_deepcrawl` when
 the application needs to control persistence or polling itself.
 

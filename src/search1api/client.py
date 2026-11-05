@@ -27,6 +27,7 @@ from .types import (
     CrawlResponse,
     CrawlType,
     DeepcrawlAcceptedResponse,
+    DeepcrawlFormat,
     DeepcrawlStatusResponse,
     ExtractResponse,
     FeedbackAgent,
@@ -83,6 +84,27 @@ def _maps_payload(
             "location": dict(location) if location is not None else None,
             "page": page,
             "max_results": max_results,
+        }
+    )
+
+
+def _deepcrawl_payload(
+    url: str,
+    *,
+    type: Optional[CrawlType],
+    max_pages: Optional[int],
+    include_paths: Optional[List[str]],
+    exclude_paths: Optional[List[str]],
+    format: Optional[DeepcrawlFormat],
+) -> Dict[str, Any]:
+    return _compact(
+        {
+            "url": url,
+            "type": type,
+            "max_pages": max_pages,
+            "include_paths": include_paths,
+            "exclude_paths": exclude_paths,
+            "format": format,
         }
     )
 
@@ -468,14 +490,34 @@ class Search1API(_ClientConfig):
         )
 
     def start_deepcrawl(
-        self, url: str, *, type: Optional[CrawlType] = None
+        self,
+        url: str,
+        *,
+        type: Optional[CrawlType] = None,
+        max_pages: Optional[int] = None,
+        include_paths: Optional[List[str]] = None,
+        exclude_paths: Optional[List[str]] = None,
+        format: Optional[DeepcrawlFormat] = None,
     ) -> DeepcrawlAcceptedResponse:
+        """Start a deepcrawl task and return its task id.
+
+        A task costs 20 credits regardless of how many pages it crawls.
+        ``max_pages`` (1-1000) applies after ``include_paths``/``exclude_paths``.
+        ``format="json"`` returns the pages in the completed status response.
+        """
         return cast(
             DeepcrawlAcceptedResponse,
             self._request_json(
                 "POST",
                 "/deepcrawl",
-                json=_compact({"url": url, "type": type}),
+                json=_deepcrawl_payload(
+                    url,
+                    type=type,
+                    max_pages=max_pages,
+                    include_paths=include_paths,
+                    exclude_paths=exclude_paths,
+                    format=format,
+                ),
                 retryable=False,
             ),
         )
@@ -512,10 +554,21 @@ class Search1API(_ClientConfig):
         url: str,
         *,
         type: Optional[CrawlType] = None,
+        max_pages: Optional[int] = None,
+        include_paths: Optional[List[str]] = None,
+        exclude_paths: Optional[List[str]] = None,
+        format: Optional[DeepcrawlFormat] = None,
         poll_interval: float = DEFAULT_DEEPCRAWL_POLL_INTERVAL,
         timeout: float = DEFAULT_DEEPCRAWL_TIMEOUT,
     ) -> DeepcrawlStatusResponse:
-        task = self.start_deepcrawl(url, type=type)
+        task = self.start_deepcrawl(
+            url,
+            type=type,
+            max_pages=max_pages,
+            include_paths=include_paths,
+            exclude_paths=exclude_paths,
+            format=format,
+        )
         return self.wait_for_deepcrawl(
             task["taskId"], poll_interval=poll_interval, timeout=timeout
         )
@@ -869,14 +922,34 @@ class AsyncSearch1API(_ClientConfig):
         )
 
     async def start_deepcrawl(
-        self, url: str, *, type: Optional[CrawlType] = None
+        self,
+        url: str,
+        *,
+        type: Optional[CrawlType] = None,
+        max_pages: Optional[int] = None,
+        include_paths: Optional[List[str]] = None,
+        exclude_paths: Optional[List[str]] = None,
+        format: Optional[DeepcrawlFormat] = None,
     ) -> DeepcrawlAcceptedResponse:
+        """Start a deepcrawl task and return its task id.
+
+        A task costs 20 credits regardless of how many pages it crawls.
+        ``max_pages`` (1-1000) applies after ``include_paths``/``exclude_paths``.
+        ``format="json"`` returns the pages in the completed status response.
+        """
         return cast(
             DeepcrawlAcceptedResponse,
             await self._request_json(
                 "POST",
                 "/deepcrawl",
-                json=_compact({"url": url, "type": type}),
+                json=_deepcrawl_payload(
+                    url,
+                    type=type,
+                    max_pages=max_pages,
+                    include_paths=include_paths,
+                    exclude_paths=exclude_paths,
+                    format=format,
+                ),
                 retryable=False,
             ),
         )
@@ -916,10 +989,21 @@ class AsyncSearch1API(_ClientConfig):
         url: str,
         *,
         type: Optional[CrawlType] = None,
+        max_pages: Optional[int] = None,
+        include_paths: Optional[List[str]] = None,
+        exclude_paths: Optional[List[str]] = None,
+        format: Optional[DeepcrawlFormat] = None,
         poll_interval: float = DEFAULT_DEEPCRAWL_POLL_INTERVAL,
         timeout: float = DEFAULT_DEEPCRAWL_TIMEOUT,
     ) -> DeepcrawlStatusResponse:
-        task = await self.start_deepcrawl(url, type=type)
+        task = await self.start_deepcrawl(
+            url,
+            type=type,
+            max_pages=max_pages,
+            include_paths=include_paths,
+            exclude_paths=exclude_paths,
+            format=format,
+        )
         return await self.wait_for_deepcrawl(
             task["taskId"], poll_interval=poll_interval, timeout=timeout
         )

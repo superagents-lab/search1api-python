@@ -248,6 +248,130 @@ def test_deepcrawl_task_creation_is_not_retried():
     http_client.close()
 
 
+DEEPCRAWL_JSON_RESULT = {
+    "taskId": "task_2",
+    "status": "completed",
+    "success": True,
+    "format": "json",
+    "stats": {"discovered": 12, "matched": 4, "skipped": 1, "crawled": 2, "failed": 1},
+    "failed": [{"url": "https://example.com/docs/broken", "error": "HTTP 404"}],
+    "resultUrl": "https://example.com/result.json",
+    "pages": [
+        {"url": "https://example.com/docs", "title": "Docs", "content": "# Docs"},
+        {"url": "https://example.com/docs/api", "title": None, "content": "API"},
+    ],
+}
+
+
+def test_deepcrawl_sends_scope_and_json_format():
+    seen = []
+    responses = [
+        (202, {"taskId": "task_2", "status": "queued"}),
+        (200, DEEPCRAWL_JSON_RESULT),
+    ]
+
+    def handler(request):
+        seen.append(request)
+        status, body = responses.pop(0)
+        return json_response(status, body, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    result = client.deepcrawl(
+        "https://example.com",
+        max_pages=3,
+        include_paths=["/docs"],
+        exclude_paths=["/docs/internal/*"],
+        format="json",
+        poll_interval=0,
+        timeout=1,
+    )
+
+    assert result == DEEPCRAWL_JSON_RESULT
+    assert [page["url"] for page in result["pages"]] == [
+        "https://example.com/docs",
+        "https://example.com/docs/api",
+    ]
+    assert result["stats"]["skipped"] == 1
+    assert str(seen[0].url) == "https://api.search1api.com/deepcrawl"
+    assert json.loads(seen[0].content) == {
+        "url": "https://example.com",
+        "max_pages": 3,
+        "include_paths": ["/docs"],
+        "exclude_paths": ["/docs/internal/*"],
+        "format": "json",
+    }
+    assert str(seen[1].url) == "https://api.search1api.com/deepcrawl/status/task_2"
+    http_client.close()
+
+
+def test_start_deepcrawl_sends_only_set_fields():
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content))
+        return json_response(202, {"taskId": "task_3", "status": "queued"}, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    client.start_deepcrawl("https://example.com")
+    client.start_deepcrawl("https://example.com", type="sitemap", max_pages=1)
+
+    assert seen == [
+        {"url": "https://example.com"},
+        {"url": "https://example.com", "type": "sitemap", "max_pages": 1},
+    ]
+    http_client.close()
+
+
+def test_async_deepcrawl_sends_scope_and_json_format():
+    async def run():
+        seen = []
+        responses = [
+            (202, {"taskId": "task_2", "status": "queued"}),
+            (200, {"taskId": "task_2", "status": "processing"}),
+            (200, DEEPCRAWL_JSON_RESULT),
+        ]
+
+        async def handler(request):
+            seen.append(request)
+            status, body = responses.pop(0)
+            return json_response(status, body, request)
+
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        client = AsyncSearch1API("test-key", client=http_client)
+        try:
+            result = await client.deepcrawl(
+                "https://example.com",
+                type="all",
+                max_pages=3,
+                include_paths=["/docs"],
+                exclude_paths=["/docs/internal/*"],
+                format="json",
+                poll_interval=0,
+                timeout=1,
+            )
+        finally:
+            await http_client.aclose()
+
+        assert result["pages"][1]["title"] is None
+        assert result["failed"] == DEEPCRAWL_JSON_RESULT["failed"]
+        assert result["resultUrl"] == "https://example.com/result.json"
+        assert json.loads(seen[0].content) == {
+            "url": "https://example.com",
+            "type": "all",
+            "max_pages": 3,
+            "include_paths": ["/docs"],
+            "exclude_paths": ["/docs/internal/*"],
+            "format": "json",
+        }
+        assert responses == []
+
+    asyncio.run(run())
+
+
 def test_search_sends_page_and_new_engines():
     bodies = []
 
