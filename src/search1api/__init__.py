@@ -1,3 +1,4 @@
+from ._version import __version__ as __version__
 from .client import AsyncSearch1API, Search1API
 from .errors import (
     APIConnectionError,
@@ -34,5 +35,3 @@ __all__ = [
     "Search1APIError",
     "UnprocessableEntityError",
 ]
-
-__version__ = "0.6.0"

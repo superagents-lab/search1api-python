@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 - 2026-11-05
+
+The `X-Search1API-Client` request header now reports the installed version (`python/0.6.1`). Since 0.3.0 it had always said `python/0.3.0`. The version lives in `search1api/_version.py` and a test keeps it equal to `pyproject.toml`. No API changes.
+
 ## 0.6.0 - 2026-11-05
 
 Adds keyword arguments to `start_deepcrawl` and `deepcrawl` on `Search1API` and `AsyncSearch1API`: `max_pages` (1-1000, default 1000, applied after the path rules in discovery order), `include_paths` and `exclude_paths` (up to 20 URL path rules each; a rule without `*` is a path prefix on segment boundaries, a rule with `*` matches the whole path; exclusion wins) and `format` (`"zip"`, the default, or `"json"`). Unset arguments are not sent. `DeepcrawlStatusResponse` adds `format`, `stats` (`discovered`, `matched`, `skipped`, `crawled`, `failed`), `failed` (`url`, `error`) and, for `format="json"`, `resultUrl` and `pages` (`url`, `title`, Markdown `content`; omitted above 5 MB, use `resultUrl`). Still 20 credits per task. The bundled OpenAPI snapshot is re-synced with the live contract.

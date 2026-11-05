@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 import httpx
 
+from ._version import __version__
 from .errors import (
     APIConnectionError,
     APITimeoutError,
@@ -252,7 +253,7 @@ class _ClientConfig:
         return {
             "Accept": accept,
             "Authorization": f"Bearer {self.api_key}",
-            "X-Search1API-Client": "python/0.3.0",
+            "X-Search1API-Client": f"python/{__version__}",
             **self.headers,
         }
 

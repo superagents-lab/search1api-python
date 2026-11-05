@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from pathlib import Path
 
 import httpx
@@ -11,6 +12,7 @@ from search1api import (
     InternalServerError,
     Search1API,
     Search1APIConfigurationError,
+    __version__,
 )
 
 
@@ -622,3 +624,25 @@ def test_sdk_covers_every_public_openapi_operation():
     for method in operation_methods.values():
         assert callable(getattr(Search1API, method))
         assert callable(getattr(AsyncSearch1API, method))
+
+
+def test_version_matches_pyproject():
+    pyproject = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
+    match = re.search(r'^version = "([^"]+)"$', pyproject, re.M)
+    assert match is not None
+    assert __version__ == match.group(1)
+
+
+def test_client_header_reports_package_version():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return json_response(200, {"links": []}, request)
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    client.sitemap("https://example.com")
+
+    assert seen[0].headers["X-Search1API-Client"] == f"python/{__version__}"
