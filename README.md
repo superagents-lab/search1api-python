@@ -147,7 +147,34 @@ Path("screenshot.png").write_bytes(screenshot["data"])
 print(screenshot["content_type"], screenshot.get("request_id"))
 ```
 
-The clients also support news, crawl, sitemap, trending, extract, usage, and
+## Extract
+
+`extract` pulls structured fields out of one page. Both `prompt` and
+`response_format` are required; wrap your JSON Schema as
+`{"type": "json_schema", "json_schema": <schema>}`:
+
+```python
+response = client.extract(
+    "https://example.com/product",
+    prompt="Extract the product name and price.",
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "price": {"type": "number"},
+            },
+        },
+    },
+)
+
+print(response["results"])
+```
+
+A request without either field raises `UnprocessableEntityError` (`422`).
+
+The clients also support news, crawl, sitemap, trending, usage, and
 batch operations exposed by the Search1API HTTP API. Requests time out after
 30 seconds and retry `429` and transient `5xx` responses twice by default.
 Authentication, payment, and validation errors are never retried. Deepcrawl

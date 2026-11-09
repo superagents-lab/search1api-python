@@ -12,8 +12,10 @@ from search1api import (
     InternalServerError,
     Search1API,
     Search1APIConfigurationError,
+    UnprocessableEntityError,
     __version__,
 )
+from search1api.types import ExtractResponseFormat
 
 
 def json_response(status_code, body, request):
@@ -199,6 +201,101 @@ def test_rate_limits_are_retried():
     assert client.usage()["usage"] == 99
     assert calls == 2
     http_client.close()
+
+
+EXTRACT_FORMAT: ExtractResponseFormat = {
+    "type": "json_schema",
+    "json_schema": {"type": "object", "properties": {"title": {"type": "string"}}},
+}
+
+
+def test_extract_sends_prompt_and_response_format():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return json_response(
+            200,
+            {
+                "success": True,
+                "extractParameters": {"url": "https://example.com"},
+                "results": {"title": "Example Domain"},
+            },
+            request,
+        )
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    result = client.extract(
+        "https://example.com",
+        prompt="Extract the page title.",
+        response_format=EXTRACT_FORMAT,
+    )
+
+    assert result["results"] == {"title": "Example Domain"}
+    assert seen[0].url.path == "/extract"
+    assert json.loads(seen[0].content) == {
+        "url": "https://example.com",
+        "prompt": "Extract the page title.",
+        "response_format": EXTRACT_FORMAT,
+    }
+    http_client.close()
+
+
+def test_extract_validation_error_raises_unprocessable_entity():
+    def handler(request):
+        return json_response(
+            422,
+            {
+                "ok": False,
+                "error": "Unprocessable Entity",
+                "message": "prompt is required and cannot be empty",
+                "errors": [{"field": "prompt", "code": "too_small"}],
+            },
+            request,
+        )
+
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = Search1API("test-key", client=http_client)
+
+    with pytest.raises(UnprocessableEntityError):
+        client.extract(
+            "https://example.com", prompt=" ", response_format=EXTRACT_FORMAT
+        )
+    http_client.close()
+
+
+def test_async_extract_sends_prompt_and_response_format():
+    async def run():
+        seen = []
+
+        async def handler(request):
+            seen.append(request)
+            return json_response(
+                200,
+                {
+                    "success": True,
+                    "extractParameters": {"url": "https://example.com"},
+                    "results": {"title": "Example Domain"},
+                },
+                request,
+            )
+
+        http_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        client = AsyncSearch1API("test-key", client=http_client)
+        try:
+            await client.extract(
+                "https://example.com",
+                prompt="Extract the page title.",
+                response_format=EXTRACT_FORMAT,
+            )
+        finally:
+            await http_client.aclose()
+        return seen
+
+    seen = asyncio.run(run())
+    assert json.loads(seen[0].content)["response_format"] == EXTRACT_FORMAT
 
 
 def test_deepcrawl_starts_and_polls():
