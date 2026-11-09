@@ -31,6 +31,7 @@ from .types import (
     DeepcrawlFormat,
     DeepcrawlStatusResponse,
     ExtractResponse,
+    ExtractResponseFormat,
     FeedbackAgent,
     FeedbackCategory,
     FeedbackResponse,
@@ -476,17 +477,15 @@ class Search1API(_ClientConfig):
         self,
         url: str,
         *,
-        prompt: Optional[str] = None,
-        response_format: Optional[Mapping[str, Any]] = None,
+        prompt: str,
+        response_format: ExtractResponseFormat,
     ) -> ExtractResponse:
         return cast(
             ExtractResponse,
             self._request_json(
                 "POST",
                 "/extract",
-                json=_compact(
-                    {"url": url, "prompt": prompt, "response_format": response_format}
-                ),
+                json={"url": url, "prompt": prompt, "response_format": response_format},
             ),
         )
 
@@ -908,17 +907,15 @@ class AsyncSearch1API(_ClientConfig):
         self,
         url: str,
         *,
-        prompt: Optional[str] = None,
-        response_format: Optional[Mapping[str, Any]] = None,
+        prompt: str,
+        response_format: ExtractResponseFormat,
     ) -> ExtractResponse:
         return cast(
             ExtractResponse,
             await self._request_json(
                 "POST",
                 "/extract",
-                json=_compact(
-                    {"url": url, "prompt": prompt, "response_format": response_format}
-                ),
+                json={"url": url, "prompt": prompt, "response_format": response_format},
             ),
         )
 

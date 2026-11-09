@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 - 2026-11-09
+
+Breaking: `extract()` on `Search1API` and `AsyncSearch1API` requires the keyword arguments `prompt` and `response_format`, matching the API. `response_format` is typed as `ExtractResponseFormat` (in `search1api.types`): `{"type": "json_schema", "json_schema": <your JSON Schema>}`. The API never accepted a request without them; it now rejects one with `422` and an `errors` array instead of `400`, which the client raises as `UnprocessableEntityError`. The bundled OpenAPI snapshot records the required fields, the request example and `TARGET_BAD_REQUEST` in `failureCategory`.
+
 ## 0.6.1 - 2026-11-05
 
 The `X-Search1API-Client` request header now reports the installed version (`python/0.6.1`). Since 0.3.0 it had always said `python/0.3.0`. The version lives in `search1api/_version.py` and a test keeps it equal to `pyproject.toml`. No API changes.

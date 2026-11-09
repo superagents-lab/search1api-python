@@ -279,6 +279,14 @@ class TrendingResponse(TypedDict):
     results: List[TrendingResult]
 
 
+class ExtractResponseFormat(TypedDict):
+    """Shape of the extract result: your JSON Schema, wrapped."""
+
+    type: Literal["json_schema"]
+    json_schema: Dict[str, Any]
+    """The JSON Schema of the result itself, not wrapped in ``{name, schema}``."""
+
+
 class ExtractResponse(TypedDict):
     success: bool
     extractParameters: Dict[str, str]
